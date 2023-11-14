@@ -1,0 +1,5 @@
+# Ignore the datasets #
+./dataset/*
+./silenceDataset1sec/*
+./silenceDataset2sec/*
+./silenceDataset3sec/*
