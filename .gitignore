@@ -1,8 +1,8 @@
 # Ignore the datasets #
-./dataset/*
-./silenceDataset1sec/*
-./silenceDataset2sec/*
-./silenceDataset3sec/*
+dataset
+silenceDataset1sec
+silenceDataset2sec
+silenceDataset3sec
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
