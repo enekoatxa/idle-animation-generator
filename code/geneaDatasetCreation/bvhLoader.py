@@ -8,7 +8,7 @@ from sklearn.preprocessing import StandardScaler
 faceIndexes = list(range(8, 27)) # face: from 8 to 26
 rightHandIndexes = list(range(34, 50)) # right hand: from 34 to 49
 leftHandIndexes = list(range(58, 74)) # left hand: from 58 to 73
-# aurretik konputatu ditut indizeak
+# precomputed indexes
 faceAndHandsIndexesNumbersGenea = [48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 280, 281, 282, 283, 284, 285, 286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296, 297, 298, 299, 348, 349, 350, 351, 352, 353, 354, 355, 356, 357, 358, 359, 360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372, 373, 374, 375, 376, 377, 378, 379, 380, 381, 382, 383, 384, 385, 386, 387, 388, 389, 390, 391, 392, 393, 394, 395, 396, 397, 398, 399, 400, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 419, 420, 421, 422, 423, 424, 425, 426, 427, 428, 429, 430, 431, 432, 433, 434, 435, 436, 437, 438, 439, 440, 441, 442, 443]
 ###############################################
 # part 1: reading a single bvh file to a list #
@@ -16,7 +16,8 @@ faceAndHandsIndexesNumbersGenea = [48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 5
 
 # reads a bvh file and separates the data from the header. Returns the header if needed, else returns only the data in a list. Can also return just the header.
 # each row of the list contains a number of joint rotations. It also returns the number of frames loaded
-def loadBvhToList(path, returnHeader = False, returnData = True, returnCounter = True, onlyPositions = False, onlyRotations = False, removeHandsAndFace = False):
+def loadBvhToList(path, returnHeader = False, returnData = True, returnCounter = True, 
+                  onlyPositions = False, onlyRotations = False, removeHandsAndFace = False, jump = 0):
     ### HEADER ###
     # read and save the header in a variable
     f = open(path, "r")
@@ -39,9 +40,12 @@ def loadBvhToList(path, returnHeader = False, returnData = True, returnCounter =
         data.append(line.split(" ")[:-1])
         line = f.readline().replace("\n", "")
         counter+=1
+        # jumping lines
+        for j in range(0, jump):
+            line = f.readline()
+            if not line:break
         if not line: break
     data = [[np.float32(s) for s in sublist] for sublist in data]
-
     # remove hands and face if needed
     if removeHandsAndFace:
         # THIS IS COMMENTED because the indexes have been precomputed and set as a global variable
@@ -92,7 +96,7 @@ def loadBvhToList(path, returnHeader = False, returnData = True, returnCounter =
 # loads the specified bvh dataset, and the partition can also be specified (if trim = true, all sequences are trimmed to the length of the smallest sequence)
 # returns: data format is a list of 3 dimensions [n(number of bvh) person][m (depends on the bvh) frame][498 rotation]
 def loadDataset(datasetName, partition = "All", specificSize=-1, verbose = False, trim = False, specificTrim = -1, 
-                onlyPositions = False, onlyRotations = False, removeHandsAndFace = False, scaler = None):
+                onlyPositions = False, onlyRotations = False, removeHandsAndFace = False, scaler = None, loadDifferences = False, jump = 0):
     allData = []
     allIds = []
     id = 0
@@ -109,7 +113,7 @@ def loadDataset(datasetName, partition = "All", specificSize=-1, verbose = False
                 print("Loading file: " + str(filename))
             if(str(filename).split(".")[-1]=="bvh"):
 
-                bvhData, bvhSize = loadBvhToList(os.path.join(root, filename), onlyPositions=onlyPositions, onlyRotations=onlyRotations, removeHandsAndFace=removeHandsAndFace)
+                bvhData, bvhSize = loadBvhToList(os.path.join(root, filename), onlyPositions=onlyPositions, onlyRotations=onlyRotations, removeHandsAndFace=removeHandsAndFace, jump=jump)
                 # if the trim flag is on, calculate the size of the smallest bvh
                 if trim:
                     if finalTrimSize > bvhSize:
@@ -135,15 +139,35 @@ def loadDataset(datasetName, partition = "All", specificSize=-1, verbose = False
             for person in range(0, len(allData)):
                 allData[person] = allData[person][0:finalTrimSize].copy()
 
+    if loadDifferences:
+        print("Loading the differences between frames...")
+        differencesVector = []
+        differencesDataset = []
+        firstPersonPositions = []
+        for personIndex in range(0, len(allData)):
+            for index in range(0, len(allData[personIndex])-1):
+                if index == 0:
+                    # save the first frame, to add later
+                    firstPersonPositions.append(allData[personIndex][0])
+                differencesVector.append((allData[personIndex][index]-allData[personIndex][index+1]))
+            differencesDataset.append(differencesVector.copy())
+            differencesVector.clear()
+        if scaler != None:
+            for index in range(0, len(differencesDataset)):
+                differencesDataset[index] = scaler.transform(differencesDataset[index])
+        return differencesDataset, firstPersonPositions, np.asarray(allIds)
+
     if scaler != None:
         for index in range(0, len(allData)):
             allData[index] = scaler.transform(allData[index])
 
-    return allData, np.asarray(allIds)
+    firstPersonPositions = []
+
+    return allData, firstPersonPositions, np.asarray(allIds)
 
 # loads the specified bvh dataset, and the partition can also be specified
 # the data is loaded in bulk, no difference between different frames or people, just a list of all the vectors
-def loadDatasetInBulk(datasetName, partition = "All", specificSize=-1, verbose = False, removeHandsAndFace=False):
+def loadDatasetInBulk(datasetName, partition = "All", specificSize=-1, verbose = False, removeHandsAndFace=False, jump=0):
     img_size = (1, 32, 32)
     allData = []
     if partition=="All":
@@ -157,15 +181,9 @@ def loadDatasetInBulk(datasetName, partition = "All", specificSize=-1, verbose =
         for filename in files:
             if verbose:
                 print("Loading file: " + str(filename))
-            vectors = loadBvhToList(os.path.join(root, filename), returnCounter=False, removeHandsAndFace=removeHandsAndFace)
+            vectors = loadBvhToList(os.path.join(root, filename), returnCounter=False, removeHandsAndFace=removeHandsAndFace, jump=jump)
             # instead of appending lists representing people, append the vectors individually
             for vector in vectors:
-                # bektoreak paddingarekin 1024 dimentsioata pasatzeko (32x32 konboluzioak erabilteko eginda behin)
-                #######################################
-                # vector = torch.from_numpy(vector)
-                # vector = torch.cat((vector, torch.zeros(526)), dim=0)
-                # vector = torch.reshape(vector, img_size) 
-                #######################################
                 allData.append(vector)
                 if specificSize!=-1 and counter>=specificSize-1:
                     return allData
@@ -194,12 +212,14 @@ def trimLastFrameFromDataset(dataset):
         person = np.delete(person, len(person))
     return newDataset
 
-# loads the vectors, and returns the differences between a vector and its next vector
-def loadDifferencesDataset(datasetName, partition = "All", specificSize=-1, verbose = False):
-    datasetX = loadDatasetInBulk(datasetName=datasetName, partition=partition, specificSize=specificSize, verbose=verbose)
+# loads the vectors, and returns the differences between a vector and its next vector (to prepare the scaler)
+def loadDifferencesDatasetInBulk(datasetName, partition = "All", specificSize=-1, verbose = False, onlyPositions = False, onlyRotations = False, removeHandsAndFace = False, jump = 0):
+    datasetX, firstPersonPositions, ids = loadDataset(datasetName, partition = partition, specificSize=specificSize, verbose = verbose,
+                onlyPositions = onlyPositions, onlyRotations = onlyRotations, removeHandsAndFace = removeHandsAndFace, jump=jump)
     differencesDataset = []
-    for index in range(0, len(datasetX)-1):
-        differencesDataset.append(datasetX[index]-datasetX[index+1])
+    for person in datasetX:
+        for index in range(0, len(person)-1):
+            differencesDataset.append(person[index]-person[index+1])
     return differencesDataset
 
 # creates the sequential part of the dataset, and also its result (the next frame)
@@ -231,10 +251,21 @@ def createAndFitStandardScaler(datasetName, partition = "All", specificSize=-1, 
     print("Fitted")
     return scaler
 
+def createAndFitStandardScalerForDifferences(datasetName, partition = "All", specificSize=-1, verbose = False, removeHandsAndFace = False, jump=0, onlyPositions=False, onlyRotations=False):
+    print("Creating standard scaler")
+    scaler = StandardScaler(copy=False)
+    print("Loading bulk dataset with differences")
+    datasetX = loadDifferencesDatasetInBulk(datasetName=datasetName, partition=partition, specificSize=specificSize, verbose=verbose, removeHandsAndFace=removeHandsAndFace, jump=jump, onlyPositions=onlyPositions, onlyRotations=onlyRotations)
+    print("Fitting scaler")
+    scaler = scaler.fit(datasetX)
+    print("Fitted")
+    return scaler
+
 # creates a dataset containing sequences of n frames, and the result being the next frame
-def loadSequenceDataset(datasetName, partition = "All", specificSize = -1, verbose = False, sequenceSize = 10, trim = False, specificTrim = -1, onlyPositions = False, onlyRotations = False, outSequenceSize=1, removeHandsAndFace = False, scaler = None):
+def loadSequenceDataset(datasetName, partition = "All", specificSize = -1, verbose = False, sequenceSize = 10, trim = False, specificTrim = -1, onlyPositions = False, onlyRotations = False, outSequenceSize=1, removeHandsAndFace = False, scaler = None, loadDifferences = False, jump = 0):
     # load the dataset in one list and the ids in the second one
-    dataset, ids = loadDataset(datasetName=datasetName, partition=partition, specificSize=specificSize, verbose=verbose, trim=trim, specificTrim=specificTrim, onlyPositions=onlyPositions, onlyRotations=onlyRotations, removeHandsAndFace=removeHandsAndFace)
+    dataset, firstPersonFrames, ids = loadDataset(datasetName=datasetName, partition=partition, specificSize=specificSize, verbose=verbose, trim=trim, specificTrim=specificTrim, onlyPositions=onlyPositions, onlyRotations=onlyRotations, removeHandsAndFace=removeHandsAndFace, loadDifferences=loadDifferences, jump=jump)
+    print(len(dataset[0][0]))
     # create the sequences and results
     datasetX, datasetY, sequencedIds = createSequenceFromFataset(dataset=dataset, ids=ids, sequenceSize=sequenceSize, outSequenceSize=outSequenceSize)
     # normalize the data
@@ -244,7 +275,7 @@ def loadSequenceDataset(datasetName, partition = "All", specificSize = -1, verbo
             datasetX[index] = scaler.transform(datasetX[index])
         for index in range(0, len(datasetY)):
             datasetY[index] = scaler.transform(datasetY[index])
-    return datasetX, datasetY, sequencedIds
+    return datasetX, datasetY, firstPersonFrames, sequencedIds
 
 # creates a dataset containing sequences of n frames, and the result being the next frame. It also separetes the rotations and positions in two arrays
 def loadSequenceDatasetSeparateRotationsAndPositions(datasetName, partition = "All", specificSize = -1, verbose = False, sequenceSize = 10, trim = False, specificTrim = -1, outSequenceSize=1):
@@ -253,15 +284,15 @@ def loadSequenceDatasetSeparateRotationsAndPositions(datasetName, partition = "A
     return datasetXPositions, datasetXRotations, datasetYPositions, datasetYRotations, sequencedIds
 
 # loads both the dataset, and its result (X, y) and returns them in two separate lists
-def loadDatasetAndCreateResults(datasetName, partition = "All", specificSize = -1, verbose = False, trim = False, specificTrim = -1):
+def loadDatasetAndCreateResults(datasetName, partition = "All", specificSize = -1, verbose = False, trim = False, specificTrim = -1, loadDifferences = False):
     # load the dataset in one list and the ids in the second one
-    datasetX, ids = loadDataset(datasetName=datasetName, partition=partition, specificSize=specificSize, verbose=verbose, trim=trim, specificTrim=specificTrim)
+    datasetX, firstPersonPositions, ids = loadDataset(datasetName=datasetName, partition=partition, specificSize=specificSize, verbose=verbose, trim=trim, specificTrim=specificTrim, loadDifferences=loadDifferences)
     # using that frame list, create the result list
     datasetY = createResultsFromDataset(datasetX)
     # trim the last frame of the original dataset
     datasetX = trimLastFrameFromDataset(datasetX)
     # return the dataset,the results and the ids
-    return datasetX, datasetY, ids
+    return datasetX, datasetY, firstPersonPositions, ids
 
 # loads only the dataset, with no results and no ids, to train the discrete VAE used as an encoder for GPT
 def loadDatasetForVae(datasetName, partition = "All", specificSize = -1, verbose = False):
